@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { 
   Zap, Menu, X, Search, LogIn, UserPlus, 
   Home, Ticket, LayoutDashboard, CreditCard, LogOut, Sparkles, 
-  Loader2, Bell, PlusCircle, Settings, HelpCircle
+  Loader2, PlusCircle, Settings, HelpCircle
 } from "lucide-react";
 
 export default function Navbar() {
@@ -19,12 +19,12 @@ export default function Navbar() {
   const { data: session, isPending } = authClient.useSession();
   const isLoggedIn = !!session;
 
-  // Hydration ফিক্সের জন্য মাউন্ট চেক
+  // Hydration ফিক্স
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // মেনু ওপেন থাকলে স্ক্রল বন্ধ রাখা
+  // মোবাইল মেনু ওপেন থাকলে স্ক্রল লক
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "unset";
@@ -68,26 +68,40 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-3 relative z-[1001]">
-            {/* Desktop Action - Create Event */}
-            {isLoggedIn && !isPending && (
-              <Link href="/create-event" className="hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
-                <PlusCircle size={14} /> Host Event
-              </Link>
-            )}
-
-            {/* Desktop Auth/Profile */}
-            <div className="hidden lg:block">
+            {/* Desktop Auth Section - Join এর পাশেই শো করবে */}
+            <div className="hidden sm:flex items-center gap-3">
               {isPending ? (
                 <Loader2 className="animate-spin text-primary" size={18} />
               ) : isLoggedIn ? (
-                <Link href="/profile" className="flex items-center gap-3 bg-white/5 px-4 py-1.5 rounded-2xl border border-white/10 hover:border-primary/50 transition-all">
-                  <img 
-                    src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name}&background=0D8ABC&color=fff`} 
-                    className="w-6 h-6 rounded-lg object-cover" 
-                    alt="User"
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">{session.user.name?.split(' ')[0]}</span>
-                </Link>
+                <div className="flex items-center gap-3">
+                  {/* Create Event Link */}
+                  <Link href="/create-event" className="hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
+                    <PlusCircle size={14} /> Host Event
+                  </Link>
+
+                  <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
+                    {/* Profile Link */}
+                    <Link href="/profile" className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-xl hover:bg-white/5 transition-all">
+                      <img 
+                        src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name}&background=0D8ABC&color=fff`} 
+                        className="w-7 h-7 rounded-lg object-cover" 
+                        alt="User"
+                      />
+                      <span className="hidden md:block text-[10px] font-black uppercase tracking-widest text-slate-300">
+                        {session.user.name?.split(' ')[0]}
+                      </span>
+                    </Link>
+
+                    {/* Logout Button (Desktop) - Join এর পাশেই হাইলাইট হবে */}
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg active:scale-95"
+                      title="Sign Out"
+                    >
+                      <LogOut size={14} /> <span className="hidden md:inline">Sign Out</span>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center gap-5">
                   <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Login</Link>
@@ -96,7 +110,7 @@ export default function Navbar() {
               )}
             </div>
             
-            {/* Menu Toggle */}
+            {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsOpen(!isOpen)} 
               className={`p-2.5 rounded-xl shadow-xl transition-all active:scale-90 ${isOpen ? 'bg-rose-600 text-white' : 'bg-primary text-primary-foreground shadow-primary/20'}`}
@@ -112,12 +126,11 @@ export default function Navbar() {
           isOpen ? "translate-y-0 opacity-100 visible" : "-translate-y-full opacity-0 invisible"
         }`}>
         
-        {/* Backdrop Overlay */}
         <div className="absolute inset-0 bg-[#020617]/98 backdrop-blur-3xl" onClick={() => setIsOpen(false)} />
         
         <div className="relative h-full flex flex-col p-8 pt-28 max-w-lg mx-auto overflow-y-auto">
           
-          {/* Mobile Search Bar */}
+          {/* Mobile Search */}
           <div className="relative mb-8">
              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70" size={16} />
              <input 
@@ -127,7 +140,7 @@ export default function Navbar() {
              />
           </div>
 
-          {/* Navigation Grid with Active Highlighting */}
+          {/* Navigation Grid */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -153,7 +166,7 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Quick Actions List */}
+          {/* Quick Actions */}
           <div className="space-y-3 mb-10">
             {[
               { name: "Payments", href: "/payments", icon: <CreditCard size={18} /> },
@@ -175,7 +188,7 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Footer User Section */}
+          {/* Footer User & Logout Section (Mobile) */}
           <div className="mt-auto pb-10">
             {isLoggedIn ? (
               <div className="space-y-4">
@@ -204,7 +217,7 @@ export default function Navbar() {
                   <LogIn size={16} /> Login
                 </Link>
                 <Link href="/register" onClick={() => setIsOpen(false)} className="flex items-center justify-center py-5 rounded-[1.5rem] bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest gap-2 shadow-xl shadow-primary/20">
-                  <UserPlus size={16} /> Sign Up
+                  <UserPlus size={16} /> Join Free
                 </Link>
               </div>
             )}

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 export default function RegisterPage() {
+  // ১. স্টেটের প্রতিটি ফিল্ডকে শুরুতে খালি স্ট্রিং ("") দিয়ে ইনিশিয়ালাইজ করা হয়েছে
   const [formData, setFormData] = useState({ 
     name: "", 
     email: "", 
@@ -46,14 +47,19 @@ export default function RegisterPage() {
       const response = await axios.post(
         "http://localhost:5000/api/v1/auth/register",
         formData,
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" }
+        }
       );
+
       if (response.data) {
         toast.success(`Welcome! Registered as ${formData.role} ✨`);
-        setTimeout(() => router.push("/login"), 1000);
+        setTimeout(() => router.push("/login"), 1500);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Registration failed.");
+      const message = error.response?.data?.message || "Registration failed. Try again.";
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -202,6 +208,8 @@ export default function RegisterPage() {
                   type="text" 
                   placeholder="FULL NAME" 
                   className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
+                  // ২. Fallback value || "" নিশ্চিত করা হয়েছে যাতে uncontrolled এরর না আসে
+                  value={formData.name || ""} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   required 
                 />
@@ -213,6 +221,7 @@ export default function RegisterPage() {
                   type="email" 
                   placeholder="EMAIL ADDRESS" 
                   className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
+                  value={formData.email || ""} 
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required 
                 />
@@ -224,6 +233,7 @@ export default function RegisterPage() {
                   type="password" 
                   placeholder="PASSWORD"
                   className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
+                  value={formData.password || ""} 
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   required 
                 />
