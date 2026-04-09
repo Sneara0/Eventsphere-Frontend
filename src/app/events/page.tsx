@@ -1,121 +1,249 @@
 "use client";
 
-import React from "react";
-import { MapPin, Calendar, ArrowUpRight, Plane, ShieldCheck, BaggageClaim, Clock, Activity } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Search, Plus, X, Zap, Sparkles } from "lucide-react";
+import EventCard from "@/components/EventCard";
 import { IEvent } from "@/types/event";
-import { getStatusColor } from "@/utils/getStatusColor";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-// --- ইন্টারফেস আপডেট: onClick যোগ করা হয়েছে ---
-interface EventCardProps {
-  event: IEvent;
-  onClick?: () => void; 
-}
+export default function EventsPage() {
+  const router = useRouter();
+  const [events, setEvents] = useState<IEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-export default function EventCard({ event, onClick }: EventCardProps) {
-  // ডাটা সেফটি চেক (যদি ডাটা না আসে তবে ক্রাশ করবে না)
-  const availableSeats = event.availableSeats ?? 0;
-  const totalSeats = event.totalSeats ?? 1;
-  const isAvailable = availableSeats > 0;
-  const progress = (availableSeats / totalSeats) * 100;
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.get("http://localhost:5000/api/v1/events", {
+        params: { searchTerm },
+        withCredentials: true,
+      });
+      setEvents(data.data || []);
+    } catch (error) {
+      console.error("API Fetch Error:", error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const delay = setTimeout(loadData, 600);
+    return () => clearTimeout(delay);
+  }, [searchTerm]);
+
+  const handleCreateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const form = e.currentTarget;
+    const rawFormData = new FormData(form);
+
+    const date = rawFormData.get("dateInput");
+    const time = rawFormData.get("time");
+    let dateTimeISO = "";
+    if (date && time) {
+      dateTimeISO = new Date(`${date}T${time}`).toISOString();
+    }
+
+    try {
+      // ১. Cloudinary-তে ইমেজ আপলোড
+      const imageFile = rawFormData.get("image") as File;
+      let uploadedImageUrl = "";
+
+      if (imageFile && imageFile.size > 0) {
+        const cloudinaryFormData = new FormData();
+        cloudinaryFormData.append("file", imageFile);
+        cloudinaryFormData.append("upload_preset", "eventsphere_preset"); 
+        cloudinaryFormData.append("cloud_name", "dxmaoxp6b");
+
+        const cloudRes = await axios.post(
+          "https://api.cloudinary.com/v1_1/dxmaoxp6b/image/upload",
+          cloudinaryFormData
+        );
+        uploadedImageUrl = cloudRes.data.secure_url;
+      }
+
+      // ২. Zod Schema অনুযায়ী ডাটা স্ট্রাকচার
+      const finalPayload = {
+        body: {
+          title: rawFormData.get("title"),
+          description: rawFormData.get("description") || `Premium flight to ${rawFormData.get("location")}`,
+          category: "FLIGHT",
+          dateTime: dateTimeISO,
+          time: rawFormData.get("time"),
+          venue: rawFormData.get("venue"),
+          location: rawFormData.get("location"),
+          ticketPrice: rawFormData.get("ticketPrice"),
+          totalSeats: rawFormData.get("totalSeats"),
+          thumbnail: uploadedImageUrl,
+          airlineName: rawFormData.get("airlineName"),
+          flightClass: "ECONOMY",
+          isRefundable: "true",
+        }
+      };
+
+      const response = await axios.post("http://localhost:5000/api/v1/events", finalPayload, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.success) {
+        toast.success("Flight Launched Successfully! 🚀");
+        setIsModalOpen(false);
+        form.reset();
+        loadData();
+
+        const newEventId = response.data?.data?.id;
+        if (newEventId) {
+          router.push(`/events/${newEventId}`);
+        }
+      }
+    } catch (error: any) {
+      console.error("Critical Error:", error);
+      const errorMsg = error.response?.data?.message || "Launch Failed! Check inputs.";
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div 
-      onClick={isAvailable ? onClick : undefined} 
-      className={`group relative bg-[#030712] border border-white/5 rounded-[3rem] p-4 transition-all duration-700 hover:border-primary/40 hover:-translate-y-4 shadow-2xl hover:shadow-primary/10 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-    >
-      
-      {/* --- Image Section --- */}
-      <div className="relative h-72 w-full overflow-hidden rounded-[2.5rem]">
-        <img 
-          src={event.thumbnail || "https://images.unsplash.com/photo-1436491865332-7a61a109cc05"} 
-          alt={event.title}
-          className="w-full h-full object-cover grayscale-[60%] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000 ease-out"
-        />
-        
-        {/* Overlay Badges */}
-        <div className="absolute top-6 left-6 flex flex-wrap gap-2">
-          <div className="bg-primary/90 backdrop-blur-xl px-5 py-2 rounded-2xl text-[9px] font-black text-primary-foreground uppercase tracking-[0.2em] italic shadow-2xl">
-            {event.category}
+    <div className="min-h-screen bg-[#020617] pt-32 pb-32 px-6 overflow-hidden relative text-white font-sans">
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[150px] rounded-full -z-10" />
+
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-20">
+          <div>
+            <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.4em] text-[10px] mb-4 italic">
+              <Zap size={14} fill="currentColor" /> Event Sphere Premiere
+            </div>
+            <h1 className="text-6xl md:text-9xl font-black italic uppercase tracking-tighter leading-[0.8] mb-10">
+              Discover <br /> <span className="text-primary">Flights.</span>
+            </h1>
+
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-3 bg-white text-black px-10 py-5 rounded-2xl font-black uppercase italic tracking-widest hover:bg-primary hover:text-white transition-all transform hover:scale-105 active:scale-95 shadow-2xl"
+            >
+              <Plus size={20} strokeWidth={3} /> Launch Flight
+            </button>
           </div>
 
-          <div className={`backdrop-blur-xl border border-white/10 px-4 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] italic flex items-center gap-1.5 ${getStatusColor(event.status)}`}>
-            <Activity size={10} className="animate-pulse" />
-            {event.status}
+          <div className="relative w-full md:w-[500px] group">
+            <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-all duration-500" size={22} />
+            <input
+              type="text"
+              placeholder="SEARCH DESTINATIONS..."
+              className="w-full bg-white/5 border border-white/10 p-7 pl-16 rounded-[2.5rem] outline-none focus:border-primary/50 focus:bg-white/10 transition-all font-black italic text-xs tracking-[0.2em] placeholder:text-slate-700 text-white"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
 
-        {event.isRefundable && (
-          <div className="absolute top-6 right-6 bg-emerald-500 text-black p-2 rounded-full shadow-2xl animate-pulse">
-            <ShieldCheck size={16} />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-48 gap-6">
+            <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <span className="text-[10px] font-black uppercase text-slate-600 tracking-[0.8em] animate-pulse">Syncing Universe</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {events.length > 0 ? (
+              events.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-48 border border-dashed border-white/10 rounded-[4rem] bg-white/[0.02]">
+                <Sparkles size={60} className="mx-auto text-slate-800 mb-6" />
+                <h3 className="text-slate-600 font-black uppercase italic tracking-[0.4em] text-sm">No Flights Orbiting Right Now</h3>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* --- Content Section --- */}
-      <div className="p-6 pt-8">
-        <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] italic">
-                <Calendar size={14} className="text-primary" />
-                {event.dateTime ? new Date(event.dateTime).toDateString() : "TBA"}
-            </div>
-            {/* @ts-ignore */}
-            {event.airlineName && (
-                <div className="flex items-center gap-2 text-primary text-[10px] font-black uppercase italic">
-                    <Plane size={14} />
-                    {/* @ts-ignore */}
-                    {event.airlineName}
-                </div>
-            )}
-        </div>
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-black/80">
+          <div className="bg-[#0a0f1e] border border-white/10 w-full max-w-2xl rounded-[3rem] p-10 relative overflow-y-auto max-h-[90vh] shadow-2xl custom-scrollbar">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
+              <X size={28} />
+            </button>
 
-        <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-3 leading-none group-hover:text-primary transition-colors line-clamp-1">
-          {event.title}
-        </h3>
+            <h2 className="text-5xl font-black italic uppercase tracking-tighter mb-10 leading-none">
+              Launch <br /><span className="text-primary">Flight.</span>
+            </h2>
 
-        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest italic mb-6">
-          <MapPin size={16} className="text-rose-600" />
-          <span className="line-clamp-1">{event.venue}, {event.location}</span>
-        </div>
+            <form onSubmit={handleCreateEvent} className="grid grid-cols-2 gap-6">
+              <div className="col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Flight Title</label>
+                <input name="title" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-primary/50 text-white" />
+              </div>
 
-        {/* Dynamic Seat Tracker */}
-        <div className="mb-10 space-y-3">
-           <div className="flex justify-between items-end">
-              <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.3em] italic">Availability</span>
-              <span className={`text-[10px] font-black italic ${isAvailable ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {availableSeats} / {totalSeats} SEATS LEFT
-              </span>
-           </div>
-           <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[2px]">
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 ease-out ${progress < 20 ? 'bg-rose-600' : 'bg-primary shadow-[0_0_15px_rgba(var(--primary),0.5)]'}`}
-                style={{ width: `${progress}%` }}
-              />
-           </div>
-        </div>
+              <div className="col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Description</label>
+                <textarea name="description" rows={3} required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none focus:border-primary/50 text-white" />
+              </div>
 
-        {/* --- Footer / CTA --- */}
-        <div className="flex items-center justify-between border-t border-white/5 pt-8">
-          <div>
-            <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 italic">Ticket Price</p>
-            <p className="text-3xl font-black text-white italic tracking-tighter">
-              {event.ticketPrice === 0 ? "FREE" : `$${event.ticketPrice}`}
-            </p>
+              <div className="col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Flight Poster (Image)</label>
+                <input type="file" name="image" required accept="image/*" className="w-full bg-white/5 border border-white/10 p-4 rounded-xl file:bg-primary file:text-white file:border-none file:rounded file:px-4 cursor-pointer" />
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Airline Name</label>
+                <input name="airlineName" placeholder="e.g. Emirates" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">From (Departure)</label>
+                <input name="venue" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">To (Destination)</label>
+                <input name="location" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Date</label>
+                <input type="date" name="dateInput" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Time</label>
+                <input type="time" name="time" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Price ($)</label>
+                <input type="number" name="ticketPrice" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">Total Seats</label>
+                <input type="number" name="totalSeats" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
+              </div>
+
+              <div className="col-span-2 pt-6">
+                <button
+                  disabled={isSubmitting}
+                  type="submit"
+                  className="w-full bg-primary text-white py-5 rounded-2xl font-black uppercase italic tracking-[0.4em] disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-95 shadow-xl shadow-primary/20"
+                >
+                  {isSubmitting ? "TRANSMITTING..." : "LAUNCH FLIGHT"}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div 
-            className={`h-16 px-6 rounded-[1.5rem] flex items-center gap-3 transition-all duration-500 shadow-2xl ${
-              isAvailable 
-              ? "bg-primary text-primary-foreground shadow-primary/30 hover:rotate-2 hover:scale-105 active:scale-95" 
-              : "bg-slate-800 text-slate-500 opacity-50"
-            }`}
-          >
-            <span className="text-[10px] font-black uppercase italic tracking-widest">
-                {isAvailable ? "BOOK NOW" : "SOLD OUT"}
-            </span>
-            <ArrowUpRight size={24} strokeWidth={3} />
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

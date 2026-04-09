@@ -4,18 +4,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { 
-  Minus, 
-  Plus, 
-  CreditCard, 
-  Loader2, 
-  ShieldCheck, 
-  Ticket, 
-  Info,
-  Sparkles
+  Minus, Plus, CreditCard, Loader2, 
+  ShieldCheck, Ticket, Sparkles 
 } from "lucide-react";
 import { BookingService } from "@/app/services/booking.service";
 
-// ইন্টারফেসটি আরও শক্তিশালী করা হয়েছে
 interface IEvent {
   id: string;
   title: string;
@@ -25,16 +18,19 @@ interface IEvent {
 }
 
 export default function BookingForm({ event }: { event: IEvent }) {
-  // availableSeats না থাকলে totalSeats ব্যবহার করবে, তাও না থাকলে ০
-  const actualAvailableSeats = event.availableSeats ?? event.totalSeats ?? 0;
-  
-  const [quantity, setQuantity] = useState(actualAvailableSeats > 0 ? 1 : 0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!event) return null;
+  // ১. সেফটি চেক: ডাটাবেস থেকে আসা সিট সংখ্যা হ্যান্ডেল করা
+  const actualAvailableSeats = event?.availableSeats ?? event?.totalSeats ?? 0;
+  
+  // ২. সিট না থাকলে ডিফল্ট ০, থাকলে ১
+  const [quantity, setQuantity] = useState(actualAvailableSeats > 0 ? 1 : 0);
 
-  const totalPrice = (event.ticketPrice || 0) * quantity;
+  if (!event || !event.id) return null;
+
+  // ৩. প্রাইস ক্যালকুলেশন (Number নিশ্চিত করা)
+  const totalPrice = (Number(event?.ticketPrice) || 0) * quantity;
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,17 +51,24 @@ export default function BookingForm({ event }: { event: IEvent }) {
       });
       
       if (res?.success) {
-        toast.success("Booking confirmed! Redirecting...");
+        toast.success("Booking initialized! Redirecting...");
         
-        // পেমেন্ট ইউআরএল থাকলে সরাসরি সেখানে যাবে, নাহলে চেকআউট পেজে
-        if (res.data?.paymentUrl) {
-          window.location.href = res.data.paymentUrl;
-        } else if (res.data?.id) {
-          router.push(`/checkout/${res.data.id}`);
+        // ৪. পেমেন্ট ইউআরএল বা বুকিং আইডি চেক
+        const paymentUrl = res.data?.paymentUrl || res.data?.url;
+        const bookingId = res.data?.id || res.data?._id;
+
+        if (paymentUrl) {
+          // পেমেন্ট পেজে রিডাইরেক্ট (Replace ব্যবহার করা ভালো যাতে ব্যাক বাটনে লুপ না হয়)
+          window.location.replace(paymentUrl);
+        } else if (bookingId) {
+          router.push(`/checkout/${bookingId}`);
+        } else {
+           toast.error("Booking created but no redirect path found.");
         }
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || "Something went wrong!";
+      // ৫. ব্যাকএন্ড এরর মেসেজ হ্যান্ডেল করা
+      const errorMsg = error.response?.data?.message || error.message || "Something went wrong!";
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -75,7 +78,7 @@ export default function BookingForm({ event }: { event: IEvent }) {
   return (
     <div className="w-full animate-in fade-in zoom-in duration-500">
       <div className="bg-[#0a0a0a] rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden relative">
-        
+        {/* Decorative Blur */}
         <div className="absolute -top-10 -left-10 w-40 h-40 bg-primary/20 rounded-full blur-[80px]" />
 
         <div className="bg-gradient-to-br from-[#111] to-[#050505] p-8 border-b border-white/5 relative z-10">
@@ -89,17 +92,17 @@ export default function BookingForm({ event }: { event: IEvent }) {
               ? 'text-red-500 bg-red-500/10 border-red-500/20' 
               : 'text-primary bg-primary/10 border-primary/20'
             }`}>
-              {actualAvailableSeats === 0 ? "SOLD OUT" : `${actualAvailableSeats} SEATS LEFT`}
+              {actualAvailableSeats === 0 ? "FULLY BOOKED" : `${actualAvailableSeats} SEATS LEFT`}
             </span>
           </div>
           
           <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2 line-clamp-1">
-            {event.title}
+            {event?.title}
           </h2>
           
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-black text-white tracking-tighter italic">
-              ${event.ticketPrice}
+              ${event?.ticketPrice || 0}
             </span>
             <span className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">/ Ticket</span>
           </div>
@@ -110,7 +113,8 @@ export default function BookingForm({ event }: { event: IEvent }) {
             <div className="flex items-center justify-between p-3 bg-white/5 rounded-[2.5rem] border border-white/10 focus-within:border-primary/40 transition-all">
               <button 
                 type="button"
-                disabled={quantity <= 1}
+                // ৬. সাবমিট হওয়ার সময় বাটন ডিজেবল রাখা
+                disabled={quantity <= 1 || actualAvailableSeats === 0 || isSubmitting}
                 onClick={() => setQuantity(prev => prev - 1)}
                 className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all border border-white/5 disabled:opacity-10"
               >
@@ -119,12 +123,13 @@ export default function BookingForm({ event }: { event: IEvent }) {
               
               <div className="flex flex-col items-center">
                 <span className="text-4xl font-black text-white tracking-tighter italic">{quantity}</span>
-                <span className="text-[8px] font-black text-primary uppercase tracking-widest">Quantity</span>
+                <span className="text-[8px] font-black text-primary uppercase tracking-widest">Passengers</span>
               </div>
 
               <button 
                 type="button"
-                disabled={quantity >= actualAvailableSeats}
+                // ৭. ম্যাক্সিমাম সিটের বেশি সিলেক্ট করা যাবে না
+                disabled={quantity >= actualAvailableSeats || actualAvailableSeats === 0 || isSubmitting}
                 onClick={() => setQuantity(prev => prev + 1)}
                 className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 active:scale-90 transition-all border border-white/5 disabled:opacity-10"
               >
@@ -136,7 +141,9 @@ export default function BookingForm({ event }: { event: IEvent }) {
           <div className="space-y-4 mb-8 bg-white/[0.03] p-6 rounded-[2rem] border border-white/5">
             <div className="flex justify-between items-center">
               <span className="text-slate-400 font-black text-xs uppercase tracking-tighter italic">Total Amount</span>
-              <span className="text-4xl font-black text-primary tracking-tighter italic">${totalPrice}</span>
+              <span className="text-4xl font-black text-primary tracking-tighter italic">
+                ${totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
 
@@ -150,7 +157,7 @@ export default function BookingForm({ event }: { event: IEvent }) {
             ) : (
               <>
                 <CreditCard size={20} className="group-hover:rotate-12 transition-transform" />
-                <span>{actualAvailableSeats === 0 ? "NO SEATS" : "Confirm Booking"}</span>
+                <span>{actualAvailableSeats === 0 ? "SOLD OUT" : "Confirm & Pay"}</span>
               </>
             )}
           </button>
@@ -162,7 +169,7 @@ export default function BookingForm({ event }: { event: IEvent }) {
             </div>
             <div className="flex items-center gap-2">
               <Ticket size={14} className="text-primary/50" />
-              <span className="text-[9px] font-black uppercase tracking-widest">Instant Ticket</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">Instant Booking</span>
             </div>
           </div>
         </form>

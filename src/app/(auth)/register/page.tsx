@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 export default function RegisterPage() {
-  // ১. স্টেটের প্রতিটি ফিল্ডকে শুরুতে খালি স্ট্রিং ("") দিয়ে ইনিশিয়ালাইজ করা হয়েছে
   const [formData, setFormData] = useState({ 
     name: "", 
     email: "", 
@@ -27,7 +26,6 @@ export default function RegisterPage() {
 
   const { data: session, isPending: sessionLoading } = useSession();
 
-  // ইউজার লগইন থাকলে রিডাইরেক্ট
   useEffect(() => {
     if (session) {
       router.replace("/dashboard");
@@ -53,10 +51,17 @@ export default function RegisterPage() {
         }
       );
 
+      // --- এখানে পরিবর্তন করা হয়েছে ---
       if (response.data) {
-        toast.success(`Welcome! Registered as ${formData.role} ✨`);
-        setTimeout(() => router.push("/login"), 1500);
+        toast.success("Registration successful! Check your email for OTP. 📧");
+        
+        // লগইন পেজে না পাঠিয়ে সরাসরি ভেরিফাই ওটিপি পেজে পাঠানো হচ্ছে ইমেলসহ
+        setTimeout(() => {
+          router.push(`/verify-otp?email=${formData.email}`);
+        }, 1500);
       }
+      // ---------------------------
+
     } catch (error: any) {
       const message = error.response?.data?.message || "Registration failed. Try again.";
       toast.error(message);
@@ -92,7 +97,6 @@ export default function RegisterPage() {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#020617] px-4 selection:bg-blue-500/30">
       
-      {/* --- Navbar --- */}
       <nav className="fixed top-0 w-full z-[100] bg-[#020617]/50 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
@@ -124,7 +128,6 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden absolute top-20 left-0 w-full bg-[#020617] border-b border-white/5 p-6 flex flex-col gap-4 animate-in slide-in-from-top duration-300">
             {navLinks.map((link) => (
@@ -137,11 +140,9 @@ export default function RegisterPage() {
         )}
       </nav>
 
-      {/* Background Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
 
-      {/* Register Form */}
       <div className="w-full max-w-[420px] z-10 space-y-8 py-24">
         <div className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-blue-600 to-purple-600 text-white mb-5 shadow-2xl rotate-3 hover:rotate-0 transition-all duration-500">
@@ -154,9 +155,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="border border-white/5 shadow-[0_0_50px_-12px_rgba(59,130,246,0.15)] rounded-[2.5rem] p-8 sm:p-10 bg-white/[0.03] backdrop-blur-3xl">
-          
           <div className="space-y-6">
-            {/* Role Selection */}
             <div className="grid grid-cols-2 gap-3 p-1 bg-white/5 rounded-2xl border border-white/10">
               <button
                 type="button"
@@ -182,7 +181,6 @@ export default function RegisterPage() {
               </button>
             </div>
 
-            {/* Google Login */}
             <button 
               type="button"
               onClick={handleGoogleLogin} 
@@ -208,7 +206,6 @@ export default function RegisterPage() {
                   type="text" 
                   placeholder="FULL NAME" 
                   className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
-                  // ২. Fallback value || "" নিশ্চিত করা হয়েছে যাতে uncontrolled এরর না আসে
                   value={formData.name || ""} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   required 

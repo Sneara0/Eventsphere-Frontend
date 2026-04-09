@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { 
   Zap, Menu, X, Search, LogIn, UserPlus, 
   Home, Ticket, LayoutDashboard, CreditCard, LogOut, Sparkles, 
-  Loader2, PlusCircle, Settings, HelpCircle
+  Loader2, PlusCircle, Settings, HelpCircle, User
 } from "lucide-react";
 
 export default function Navbar() {
@@ -16,30 +16,39 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Better Auth Session Hook
   const { data: session, isPending } = authClient.useSession();
+  
+  // সেশন থাকলে ট্রু হবে
   const isLoggedIn = !!session;
 
-  // Hydration ফিক্স
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // মোবাইল মেনু ওপেন থাকলে স্ক্রল লক
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "unset";
   }, [isOpen]);
 
   const handleLogout = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          setIsOpen(false);
-          router.push("/login");
-          router.refresh();
+    try {
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            setIsOpen(false);
+            window.location.href = "/login";
+          },
+          onError: (ctx) => {
+            console.error("Logout failed:", ctx.error);
+            window.location.href = "/login";
+          }
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error("Unexpected logout error:", error);
+      window.location.href = "/login";
+    }
   };
 
   if (!mounted) return null; 
@@ -68,44 +77,61 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-3 relative z-[1001]">
-            {/* Desktop Auth Section - Join এর পাশেই শো করবে */}
+            {/* Desktop Auth Section */}
             <div className="hidden sm:flex items-center gap-3">
               {isPending ? (
                 <Loader2 className="animate-spin text-primary" size={18} />
-              ) : isLoggedIn ? (
-                <div className="flex items-center gap-3">
-                  {/* Create Event Link */}
-                  <Link href="/create-event" className="hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
-                    <PlusCircle size={14} /> Host Event
-                  </Link>
-
-                  <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
-                    {/* Profile Link */}
-                    <Link href="/profile" className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-xl hover:bg-white/5 transition-all">
-                      <img 
-                        src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name}&background=0D8ABC&color=fff`} 
-                        className="w-7 h-7 rounded-lg object-cover" 
-                        alt="User"
-                      />
-                      <span className="hidden md:block text-[10px] font-black uppercase tracking-widest text-slate-300">
-                        {session.user.name?.split(' ')[0]}
-                      </span>
-                    </Link>
-
-                    {/* Logout Button (Desktop) - Join এর পাশেই হাইলাইট হবে */}
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg active:scale-95"
-                      title="Sign Out"
-                    >
-                      <LogOut size={14} /> <span className="hidden md:inline">Sign Out</span>
-                    </button>
-                  </div>
-                </div>
               ) : (
-                <div className="flex items-center gap-5">
-                  <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Login</Link>
-                  <Link href="/register" className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">Join Free</Link>
+                <div className="flex items-center gap-3">
+                  {isLoggedIn ? (
+                    <div className="flex items-center gap-4">
+                      {/* Host Event Button */}
+                      <Link href="/create-event" className="hidden lg:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
+                        <PlusCircle size={14} /> Host Event
+                      </Link>
+
+                      {/* Active Identity Text & Profile */}
+                      <div className="flex items-center gap-4 border-l border-white/10 pl-4">
+                        <div className="flex flex-col items-end hidden lg:block">
+                          <span className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] leading-none mb-1">Active Identity</span>
+                          <p className="text-[11px] text-white font-black tracking-tight uppercase italic leading-none">
+                            {session.user.name || "User"}
+                          </p>
+                        </div>
+                        
+                        <Link href="/dashboard" className="relative group/avatar">
+                          <div className="w-10 h-10 rounded-2xl border border-white/10 overflow-hidden bg-white/5 flex items-center justify-center group-hover/avatar:border-primary/50 transition-all shadow-xl shadow-primary/5">
+                            {session.user.image ? (
+                              <img 
+                                src={session.user.image} 
+                                className="w-full h-full object-cover" 
+                                alt="Profile"
+                                onError={(e) => { e.currentTarget.src = `https://ui-avatars.com/api/?name=${session.user.name}&background=6366f1&color=fff`; }}
+                              />
+                            ) : (
+                              <span className="text-primary font-black uppercase text-sm">
+                                {session.user.name?.[0]}
+                              </span>
+                            )}
+                          </div>
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#020617] rounded-full shadow-lg"></div>
+                        </Link>
+                      </div>
+
+                      {/* Sign Out Button */}
+                      <button 
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
+                      >
+                        <LogOut size={14} /> <span className="hidden md:inline">Exit</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-5 mr-2">
+                      <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Login</Link>
+                      <Link href="/register" className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-all">Join Free</Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -113,7 +139,7 @@ export default function Navbar() {
             {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsOpen(!isOpen)} 
-              className={`p-2.5 rounded-xl shadow-xl transition-all active:scale-90 ${isOpen ? 'bg-rose-600 text-white' : 'bg-primary text-primary-foreground shadow-primary/20'}`}
+              className={`p-2.5 rounded-xl shadow-xl transition-all active:scale-90 ${isOpen ? 'bg-rose-600 text-white' : 'bg-primary text-primary-foreground'}`}
             >
               {isOpen ? <X size={20} strokeWidth={3} /> : <Menu size={20} strokeWidth={3} />}
             </button>
@@ -130,7 +156,6 @@ export default function Navbar() {
         
         <div className="relative h-full flex flex-col p-8 pt-28 max-w-lg mx-auto overflow-y-auto">
           
-          {/* Mobile Search */}
           <div className="relative mb-8">
              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary/70" size={16} />
              <input 
@@ -140,7 +165,6 @@ export default function Navbar() {
              />
           </div>
 
-          {/* Navigation Grid */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -149,7 +173,7 @@ export default function Navbar() {
                   key={link.name} 
                   href={link.href} 
                   onClick={() => setIsOpen(false)}
-                  className={`flex flex-col gap-4 p-6 rounded-[2rem] border transition-all duration-300 active:scale-95 ${
+                  className={`flex flex-col gap-4 p-6 rounded-[2rem] border transition-all duration-300 ${
                     isActive 
                     ? "bg-primary border-primary shadow-2xl shadow-primary/40 -translate-y-1" 
                     : `${link.bg} border-white/5`
@@ -166,18 +190,17 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Quick Actions */}
           <div className="space-y-3 mb-10">
             {[
-              { name: "Payments", href: "/payments", icon: <CreditCard size={18} /> },
-              { name: "Settings", href: "/settings", icon: <Settings size={18} /> },
+              { name: "Payments", href: "/dashboard", icon: <CreditCard size={18} /> },
+              { name: "Settings", href: "/dashboard", icon: <Settings size={18} /> },
               { name: "Help Support", href: "/help", icon: <HelpCircle size={18} /> }
             ].map((item) => (
               <Link 
                 key={item.name} 
                 href={item.href} 
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-between p-5 bg-white/5 rounded-[1.5rem] border border-white/10 hover:bg-white/10 transition-all group"
+                className="flex items-center justify-between p-5 bg-white/5 rounded-[1.5rem] border border-white/10 hover:bg-white/10 group transition-all"
               >
                 <div className="flex items-center gap-4 text-white/50 group-hover:text-white">
                   {item.icon}
@@ -188,28 +211,24 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Footer User & Logout Section (Mobile) */}
-          <div className="mt-auto pb-10">
+          <div className="mt-auto pb-10 space-y-4">
             {isLoggedIn ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem] border border-white/10">
+              <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem] border border-white/10">
+                {session.user.image ? (
                   <img 
-                    src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name}`} 
+                    src={session.user.image} 
                     className="w-14 h-14 rounded-2xl border-2 border-primary/30 object-cover" 
                     alt="Avatar"
                   />
-                  <div className="min-w-0">
-                    <h3 className="text-white font-black text-sm truncate tracking-widest uppercase italic">{session.user.name}</h3>
-                    <p className="text-primary text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Verified Member</p>
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl border-2 border-primary/30 bg-primary/10 flex items-center justify-center text-primary font-black text-xl">
+                    {session.user.name?.[0]}
                   </div>
+                )}
+                <div className="min-w-0">
+                  <h3 className="text-white font-black text-sm truncate tracking-widest uppercase italic">{session.user.name}</h3>
+                  <p className="text-primary text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Verified Member</p>
                 </div>
-
-                <button 
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] bg-rose-600/20 border border-rose-600/30 text-rose-500 font-black text-[10px] tracking-[0.2em] uppercase hover:bg-rose-600 hover:text-white transition-all shadow-lg active:scale-95"
-                >
-                  <LogOut size={16} /> Sign Out Account
-                </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -221,6 +240,13 @@ export default function Navbar() {
                 </Link>
               </div>
             )}
+
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] bg-rose-600/20 border border-rose-600/30 text-rose-500 font-black text-[10px] tracking-[0.2em] uppercase hover:bg-rose-600 hover:text-white transition-all shadow-lg active:scale-95"
+            >
+              <LogOut size={16} /> Sign Out Account
+            </button>
           </div>
         </div>
       </div>

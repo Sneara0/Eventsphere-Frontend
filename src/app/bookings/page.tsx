@@ -1,13 +1,25 @@
+// 📂 src/app/my-bookings/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { toast } from "sonner";
-import { Trash2, Loader2, Calendar, Ticket, MapPin, Search, ArrowRight, Sparkles } from "lucide-react";
+import { 
+  Trash2, 
+  Loader2, 
+  Calendar, 
+  Ticket, 
+  MapPin, 
+  Search, 
+  ArrowRight, 
+  Sparkles, 
+  CreditCard 
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BookingService } from "../services/booking.service";
 
 export default function MyBookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +51,12 @@ export default function MyBookingsPage() {
     }
   };
 
+  // পেমেন্ট হ্যান্ডলার (ইউজারকে পেমেন্ট পেজে পাঠাবে)
+  const handlePaymentRedirect = (bookingId: string) => {
+    toast.loading("Preparing payment session...");
+    router.push(`/payments?bookingId=${bookingId}`);
+  };
+
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-[#050505]">
       <Loader2 className="animate-spin text-indigo-500" size={48} />
@@ -57,9 +75,6 @@ export default function MyBookingsPage() {
               <span>User Dashboard</span>
             </div>
             <h1 className="text-5xl font-black tracking-tighter">My <span className="text-indigo-500">Tickets</span></h1>
-            <p className="text-gray-500 font-medium max-w-md">
-              Review your exclusive access passes and manage upcoming event reservations.
-            </p>
           </div>
           <Link href="/events" className="group flex items-center gap-3 bg-white text-black px-8 py-4 rounded-full font-black hover:bg-indigo-500 hover:text-white transition-all duration-500">
             Find More Events <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
@@ -72,7 +87,6 @@ export default function MyBookingsPage() {
             bookings.map((booking) => (
               <div key={booking.id} className="relative group bg-[#0f0f0f] border border-white/5 p-8 md:p-10 rounded-[3rem] overflow-hidden hover:border-indigo-500/30 transition-all duration-700 shadow-2xl shadow-black">
                 
-                {/* Background Glow Effect */}
                 <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] group-hover:bg-indigo-600/20 transition-all duration-700" />
                 
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
@@ -96,55 +110,55 @@ export default function MyBookingsPage() {
                     
                     <div className="flex flex-wrap gap-6">
                       <div className="flex items-center gap-3 text-gray-400 group-hover:text-gray-200 transition-colors">
-                        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                          <Calendar size={18} className="text-indigo-400" />
-                        </div>
-                        <span className="text-sm font-medium italic">
-                          {new Date(booking.event.dateTime).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        <Calendar size={18} className="text-indigo-400" />
+                        <span className="text-sm font-medium">
+                          {new Date(booking.event.dateTime).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-gray-400 group-hover:text-gray-200 transition-colors">
-                        <div className="p-2 bg-white/5 rounded-xl border border-white/5">
-                          <MapPin size={18} className="text-indigo-400" />
-                        </div>
-                        <span className="text-sm font-medium italic">{booking.event.location}</span>
+                        <MapPin size={18} className="text-indigo-400" />
+                        <span className="text-sm font-medium">{booking.event.location}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Right Section: Stats & Actions */}
+                  {/* Right Section: Stats & Payment Button */}
                   <div className="w-full md:w-auto flex flex-row md:flex-col lg:flex-row items-center gap-8 md:gap-12 pl-0 md:pl-10 border-t md:border-t-0 md:border-l border-white/5 pt-8 md:pt-0">
                     
                     <div className="text-left md:text-center">
-                      <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] mb-2">Quantity</p>
-                      <div className="flex items-center gap-2 text-2xl font-black text-white/90">
-                        <Ticket size={20} className="text-indigo-500" /> {booking.quantity}
-                      </div>
-                    </div>
-                    
-                    <div className="text-left md:text-center">
-                      <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] mb-2">Total Paid</p>
+                      <p className="text-[10px] text-gray-600 font-black uppercase mb-1">Price</p>
                       <p className="text-3xl font-black text-indigo-500 tracking-tighter">${booking.totalAmount}</p>
                     </div>
 
-                    <button 
-                      onClick={() => handleDelete(booking.id)}
-                      className="ml-auto md:ml-0 p-5 bg-white/5 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-[2rem] transition-all duration-300 border border-transparent hover:border-red-500/20"
-                    >
-                      <Trash2 size={24} />
-                    </button>
+                    <div className="flex items-center gap-4 ml-auto md:ml-0">
+                      {/* পেমেন্ট বাটন (শুধু UNPAID থাকলে দেখাবে) */}
+                      {booking.paymentStatus === 'UNPAID' && (
+                        <button 
+                          onClick={() => handlePaymentRedirect(booking.id)}
+                          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-7 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-indigo-600/20 active:scale-95 group/btn"
+                        >
+                          <CreditCard size={18} className="group-hover/btn:rotate-12 transition-transform" /> 
+                          Pay Now
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => handleDelete(booking.id)}
+                        className="p-4 bg-white/5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all border border-transparent hover:border-red-500/20"
+                        title="Cancel Booking"
+                      >
+                        <Trash2 size={22} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))
           ) : (
             <div className="text-center py-32 bg-[#0a0a0a] rounded-[4rem] border-2 border-dashed border-white/5">
-              <div className="bg-white/5 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(79,70,229,0.1)]">
-                <Search size={40} className="text-gray-700" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">No active passes found</h3>
-              <p className="text-gray-500 mb-10 max-w-xs mx-auto text-sm">Explore the latest events and secure your spot at the most exclusive gatherings.</p>
-              <Link href="/events" className="inline-block bg-indigo-600 text-white px-10 py-5 rounded-full font-black shadow-2xl shadow-indigo-500/20 hover:bg-indigo-500 hover:-translate-y-1 transition-all">
+              <Search size={40} className="text-gray-700 mx-auto mb-6" />
+              <h3 className="text-xl font-bold text-white mb-6">No tickets found</h3>
+              <Link href="/events" className="bg-indigo-600 text-white px-8 py-4 rounded-full font-black">
                 Browse Events
               </Link>
             </div>
