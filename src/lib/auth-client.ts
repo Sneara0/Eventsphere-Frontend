@@ -1,20 +1,23 @@
-// @/lib/auth-client.ts
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
+    // baseURL হবে আপনার ব্যাকএন্ডের রুট URL
     baseURL: "http://localhost:5000", 
-    basePath: "/api/v1/auth", // আপনার ব্যাকএন্ড রাউট অনুযায়ী
+    
+    // basePath সাধারণত Better-Auth এর ডিফল্ট রাউট /api/auth হয়। 
+    // যদি আপনি ব্যাকএন্ডে /api/v1/auth ব্যবহার করেন তবে সেটাই দিবেন।
+    basePath: "/api/v1/auth", 
+
     fetchOptions: {
-        credentials: "include", // কুকি আদান-প্রদানের জন্য জরুরি
+        // এই পার্টটি কুকি পাঠানোর জন্য সবচেয়ে গুরুত্বপূর্ণ
+        credentials: "include", 
     },
 });
 
-// সরাসরি মেথডগুলো এক্সপোর্ট করার চেয়ে authClient থেকে ব্যবহার করা বেশি নিরাপদ
-// তবে আপনি যদি এভাবেই চান, তবে নিচের স্টাইলটি ফলো করুন:
+// ডেসট্রাকচারিং করে এক্সপোর্ট করা
 export const { useSession, signIn, signUp } = authClient;
 
-// signOut কে আলাদাভাবে এক্সপোর্ট না করে সরাসরি মেথড হিসেবে ব্যবহার করা ভালো
-// অথবা একটি কাস্টম র‍্যাপার ফাংশন দিতে পারেন যা নিশ্চিতভাবে কাজ করবে
+// signOut মেথড
 export const signOut = async () => {
     return await authClient.signOut();
 };

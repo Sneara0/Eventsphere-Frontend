@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Search, Plus, X, Zap, Sparkles } from "lucide-react";
+import { Search, Plus, X, Zap, Sparkles, MessageSquare } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import { IEvent } from "@/types/event";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import ReviewSection from "@/components/modules/reviews/ReviewSection"; // আপনার তৈরি করা রিভিউ কম্পোনেন্ট
 
 export default function EventsPage() {
   const router = useRouter();
@@ -69,7 +70,7 @@ export default function EventsPage() {
         uploadedImageUrl = cloudRes.data.secure_url;
       }
 
-      // ২. Zod Schema অনুযায়ী ডাটা স্ট্রাকচার
+      // ২. Payload Structure
       const finalPayload = {
         body: {
           title: rawFormData.get("title"),
@@ -90,9 +91,7 @@ export default function EventsPage() {
 
       const response = await axios.post("http://localhost:5000/api/v1/events", finalPayload, {
         withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.data.success) {
@@ -108,7 +107,7 @@ export default function EventsPage() {
       }
     } catch (error: any) {
       console.error("Critical Error:", error);
-      const errorMsg = error.response?.data?.message || "Launch Failed! Check inputs.";
+      const errorMsg = error.response?.data?.message || "Launch Failed!";
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -120,6 +119,7 @@ export default function EventsPage() {
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 blur-[150px] rounded-full -z-10" />
 
       <div className="max-w-7xl mx-auto">
+        {/* --- Header Section --- */}
         <div className="flex flex-col md:flex-row justify-between items-end gap-10 mb-20">
           <div>
             <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.4em] text-[10px] mb-4 italic">
@@ -148,6 +148,7 @@ export default function EventsPage() {
           </div>
         </div>
 
+        {/* --- Main Content (Event Cards) --- */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-48 gap-6">
             <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -167,8 +168,33 @@ export default function EventsPage() {
             )}
           </div>
         )}
+
+        {/* --- Community & Reviews Section (Added Here) --- */}
+        <div className="mt-40 border-t border-white/5 pt-20">
+          <div className="grid lg:grid-cols-3 gap-20">
+            <div className="lg:col-span-1">
+              <div className="sticky top-40">
+                <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.3em] text-[10px] mb-4">
+                  <MessageSquare size={14} /> Passenger Testimonials
+                </div>
+                <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none mb-6">
+                  What They <br /> <span className="text-primary">Say.</span>
+                </h2>
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">
+                  Real experiences from our elite travelers. Trust the journey, verify the flight.
+                </p>
+              </div>
+            </div>
+            
+            <div className="lg:col-span-2 bg-white/[0.01] rounded-[3rem] p-1 border border-white/5">
+              {/* নির্দিষ্ট ইভেন্টের বদলে এখানে ইভেন্ট লিস্টের প্রথমটির রিভিউ অথবা গ্লোবাল রিভিউ দেখাতে পারেন */}
+              <ReviewSection eventId={events[0]?.id || "global"} />
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* --- Launch Flight Modal --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-black/80">
           <div className="bg-[#0a0f1e] border border-white/10 w-full max-w-2xl rounded-[3rem] p-10 relative overflow-y-auto max-h-[90vh] shadow-2xl custom-scrollbar">
@@ -202,12 +228,12 @@ export default function EventsPage() {
               </div>
 
               <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">From (Departure)</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">From</label>
                 <input name="venue" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
               </div>
 
               <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">To (Destination)</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2 block">To</label>
                 <input name="location" required className="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none text-white" />
               </div>
 

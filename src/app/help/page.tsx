@@ -3,7 +3,7 @@
 import React from "react";
 import { HelpCircle, MessageCircle, Book, ShieldQuestion, ArrowRight, Zap, Mail, LifeBuoy, Plane } from "lucide-react";
 import Link from "next/link";
-import { motion ,Variants} from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 export default function HelpPage() {
   const faqs = [
@@ -21,18 +21,22 @@ export default function HelpPage() {
     { src: "https://images.unsplash.com/photo-1506012733851-46297839fa41?q=80&w=600&auto=format&fit=crop", title: "Premium Desk" },
   ];
 
-  // Animation variants
-  const containerVariants = {
+  // Animation variants with explicit Typescript Variants interface
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.5, ease: "easeOut" } 
+    },
   };
 
-  const galleryVariants = {
+  const galleryVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.3 } },
   };
@@ -70,7 +74,7 @@ export default function HelpPage() {
           </div>
         </motion.header>
 
-        {/* --- Quick Support Cards (UNCHANGED) --- */}
+        {/* --- Quick Support Cards --- */}
         <motion.section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16" variants={containerVariants}>
           {[
             { icon: MessageCircle, label: "Live Chat Support", desc: "Connect with a support specialist now.", action: "Start Chat" },
@@ -134,7 +138,7 @@ export default function HelpPage() {
           </div>
         </motion.section>
 
-        {/* --- FAQ Section (REPOSITIONED BELOW GALLERY) --- */}
+        {/* --- FAQ Section --- */}
         <motion.section className="mb-20" variants={containerVariants}>
           <motion.div className="flex items-center gap-3 mb-12 border-l-4 border-indigo-500 pl-5" variants={itemVariants}>
             <Zap size={20} className="text-indigo-400" />
