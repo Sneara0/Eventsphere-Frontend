@@ -7,7 +7,10 @@ import axios from "axios";
 import { authClient, useSession } from "@/lib/auth-client"; 
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, Sparkles, ArrowRight } from "lucide-react";
-import Cookies from "js-cookie"; // কুকি ইম্পোর্ট করুন
+import Cookies from "js-cookie";
+
+// আপনার নির্ধারিত সুপার অ্যাডমিন ইমেল
+const SUPER_ADMIN_EMAIL = "admin@eventsphere.com";
 
 export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
@@ -19,8 +22,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
+    // যদি অলরেডি সেশন থাকে, তবে সঠিক ড্যাশবোর্ডে পাঠিয়ে দাও
     if (session) {
-      router.replace("/dashboard");
+      if (session.user?.email === SUPER_ADMIN_EMAIL) {
+        router.replace("/admin/dashboard");
+      } else {
+        router.replace("/dashboard");
+      }
     }
   }, [session, router]);
 
@@ -37,21 +45,24 @@ export default function LoginPage() {
 
       if (response.data && response.data.success) {
         const token = response.data.data?.accessToken || response.data.token;
+        const user = response.data.data?.user; // ব্যাকেন্ড থেকে আসা ইউজার অবজেক্ট
         
         if (token) {
-          // ১. লোকাল স্টোরেজে রাখা (Axios Interceptor এর জন্য)
+          // ১. লোকাল স্টোরেজে রাখা
           localStorage.setItem("accessToken", token);
-
-          // ২. কুকিতে রাখা (ব্যাকেন্ড checkAuth এবং SSR এর জন্য)
-          // expires: 7 মানে ৭ দিন কুকিটি থাকবে
+          // ২. কুকিতে রাখা (৭ দিনের জন্য)
           Cookies.set("accessToken", token, { expires: 7, path: '/' });
         }
 
         toast.success("Welcome back! 🚀");
         
         setTimeout(() => {
-          // Hard refresh নিশ্চিত করে যেন সব মিডলওয়্যার নতুন টোকেন পায়
-          window.location.href = "/dashboard"; 
+          // ইমেল অথবা ডাটাবেস রোল চেক করে রিডাইরেক্ট
+          if (formData.email === SUPER_ADMIN_EMAIL || user?.role === "SUPER_ADMIN") {
+            window.location.href = "/admin/dashboard"; 
+          } else {
+            window.location.href = "/dashboard"; 
+          }
         }, 500);
       }
     } catch (error: any) {
