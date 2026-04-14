@@ -28,7 +28,7 @@ export default function BookingWrapper({ event }: { event: any }) {
               <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full" /> SSL SECURED TRANSACTION
             </p>
             <button 
-              onClick={() => setIsFormOpen(true)} // ক্লিক করলে স্টেট চেঞ্জ হবে
+              onClick={() => setIsFormOpen(true)}
               className="group relative inline-flex items-center gap-6 bg-white text-black px-12 py-7 rounded-full font-black uppercase italic tracking-[0.3em] transition-all hover:bg-primary hover:text-white hover:scale-[1.02] active:scale-95 shadow-2xl shadow-white/5"
             >
               <Ticket size={20} className="group-hover:rotate-12 transition-transform" />
