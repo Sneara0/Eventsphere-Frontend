@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios"; 
@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Loader2, Mail, Lock, Sparkles, ArrowRight } from "lucide-react";
 import Cookies from "js-cookie";
 
-// আপনার নির্ধারিত সুপার অ্যাডমিন ইমেল
 const SUPER_ADMIN_EMAIL = "admin@eventsphere.com";
 
 export default function LoginPage() {
@@ -20,23 +19,40 @@ export default function LoginPage() {
   
   const { data: session, isPending: sessionLoading } = useSession();
 
+  // ১. রিডাইরেক্ট লজিককে একটি useCallback এর ভেতরে রাখা হয়েছে যেন এটি বারবার পরিবর্তন না হয়
+  const redirectUser = useCallback((email: string | undefined, role: string | undefined) => {
+    const userRole = role?.toUpperCase();
+    
+    if (email === SUPER_ADMIN_EMAIL || userRole === "SUPER_ADMIN" || userRole === "ADMIN") {
+      window.location.href = "/admin/dashboard";
+    } else if (userRole === "ORGANIZER") {
+      window.location.href = "/organizer/dashboard";
+    } else {
+      window.location.href = "/dashboard";
+    }
+  }, []);
+
+  // ২. শুধুমাত্র মাউন্ট চেক করার জন্য
   useEffect(() => {
     setMounted(true);
-    // যদি অলরেডি সেশন থাকে, তবে সঠিক ড্যাশবোর্ডে পাঠিয়ে দাও
-    if (session) {
-      if (session.user?.email === SUPER_ADMIN_EMAIL) {
-        router.replace("/admin/dashboard");
-      } else {
-        router.replace("/dashboard");
-      }
+  }, []);
+
+  // ৩. সেশন চেক করে রিডাইরেক্ট করার জন্য আলাদা ইফেক্ট
+  useEffect(() => {
+    if (mounted && session && !sessionLoading) {
+      redirectUser(session.user?.email, (session.user as any)?.role);
     }
-  }, [session, router]);
+  }, [mounted, session, sessionLoading, redirectUser]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // ক্লিনআপ
+      localStorage.removeItem("accessToken");
+      Cookies.remove("accessToken");
+
       const response = await axios.post(
         "http://localhost:5000/api/v1/auth/login", 
         formData,
@@ -44,30 +60,25 @@ export default function LoginPage() {
       );
 
       if (response.data && response.data.success) {
-        const token = response.data.data?.accessToken || response.data.token;
-        const user = response.data.data?.user; // ব্যাকেন্ড থেকে আসা ইউজার অবজেক্ট
+        const token = response.data.token || 
+                      response.data.accessToken || 
+                      response.data.data?.accessToken;
         
-        if (token) {
-          // ১. লোকাল স্টোরেজে রাখা
-          localStorage.setItem("accessToken", token);
-          // ২. কুকিতে রাখা (৭ দিনের জন্য)
-          Cookies.set("accessToken", token, { expires: 7, path: '/' });
-        }
+        const user = response.data.data?.user || response.data.user;
 
-        toast.success("Welcome back! 🚀");
-        
-        setTimeout(() => {
-          // ইমেল অথবা ডাটাবেস রোল চেক করে রিডাইরেক্ট
-          if (formData.email === SUPER_ADMIN_EMAIL || user?.role === "SUPER_ADMIN") {
-            window.location.href = "/admin/dashboard"; 
-          } else {
-            window.location.href = "/dashboard"; 
-          }
-        }, 500);
+        if (token) {
+          localStorage.setItem("accessToken", token);
+          Cookies.set("accessToken", token, { expires: 7, path: '/' });
+          
+          toast.success("Login Successful! 🚀");
+
+          setTimeout(() => {
+            redirectUser(formData.email, user?.role);
+          }, 500);
+        }
       }
     } catch (error: any) {
-      const backendError = error.response?.data;
-      const errorMsg = backendError?.message || "Invalid email or password.";
+      const errorMsg = error.response?.data?.message || "Invalid credentials";
       toast.error(errorMsg);
     } finally {
       setIsLoading(false);
@@ -81,13 +92,11 @@ export default function LoginPage() {
         callbackURL: "/dashboard",
       });
     } catch (error: any) {
-      toast.error("Google login failed. Please try again.");
+      toast.error("Google login failed.");
     }
   };
 
-  if (!mounted) {
-    return <div className="min-h-screen bg-[#020617]" />;
-  }
+  if (!mounted) return null;
 
   if (sessionLoading) {
     return (
@@ -97,11 +106,12 @@ export default function LoginPage() {
     );
   }
 
+  // যদি অলরেডি সেশন থাকে, তবে ফর্ম দেখানোর দরকার নেই (রিডাইরেক্ট এর আগ পর্যন্ত)
   if (session) return null;
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#020617] px-4">
-      {/* Background Glows */}
+      {/* Background Effects */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
 
@@ -113,10 +123,10 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black tracking-tighter text-white italic uppercase">
             EVENT<span className="text-blue-500">.</span>SPHERE
           </h1>
-          <p className="text-slate-400 text-[10px] mt-3 font-bold tracking-[0.3em] uppercase">Secure Access Control</p>
+          <p className="text-slate-400 text-[10px] mt-3 font-bold tracking-[0.3em] uppercase">Secure Multi-Role Access</p>
         </div>
 
-        <div className="border border-white/5 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 bg-white/[0.03] backdrop-blur-3xl relative overflow-hidden">
+        <div className="border border-white/5 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 bg-white/[0.03] backdrop-blur-3xl">
           <div className="grid gap-6">
             <button 
               type="button" 
@@ -136,32 +146,23 @@ export default function LoginPage() {
                 <input 
                   type="email" 
                   placeholder="EMAIL ADDRESS" 
-                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
+                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold"
+                  value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required 
                 />
               </div>
               
-              <div className="space-y-2">
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
-                  <input 
-                    type="password" 
-                    placeholder="PASSWORD"
-                    className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required 
-                  />
-                </div>
-                
-                <div className="flex justify-end px-1">
-                  <Link 
-                    href="/forget-password" 
-                    className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-500 transition-colors"
-                  >
-                    Forgot Password?
-                  </Link>
-                </div>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                <input 
+                  type="password" 
+                  placeholder="PASSWORD"
+                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold"
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  required 
+                />
               </div>
 
               <button 
@@ -171,7 +172,7 @@ export default function LoginPage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:opacity-90 transition-all" />
                 <span className="relative flex items-center justify-center gap-2">
-                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Access Account <ArrowRight size={14} /></>}
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Access Dashboard <ArrowRight size={14} /></>}
                 </span>
               </button>
             </form>
@@ -180,7 +181,7 @@ export default function LoginPage() {
           <div className="text-center mt-8 pt-6 border-t border-white/5">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-white hover:text-blue-500 transition-all underline underline-offset-4 decoration-blue-500/30">
+              <Link href="/register" className="text-white hover:text-blue-500 transition-all underline underline-offset-4">
                 Register
               </Link>
             </p>

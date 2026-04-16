@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { axiosInstance } from "@/lib/axiosInstance";
+import  axiosInstance  from "@/lib/axiosInstance";
 import { Loader2, ShieldCheck, CreditCard, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
