@@ -19,16 +19,20 @@ export default function LoginPage() {
   
   const { data: session, isPending: sessionLoading } = useSession();
 
-  // --- এনভায়রনমেন্ট ভেরিয়েবল সেটআপ ---
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
+  // --- রিডাইরেক্ট লজিক (সংশোধিত) ---
   const redirectUser = useCallback((email: string | undefined, role: string | undefined) => {
     const userRole = role?.toUpperCase();
     
+    console.log("Redirecting user with role:", userRole); // Debugging
+
     if (email === SUPER_ADMIN_EMAIL || userRole === "SUPER_ADMIN" || userRole === "ADMIN") {
       window.location.href = "/admin/dashboard";
     } else if (userRole === "ORGANIZER") {
-      window.location.href = "/organizer/dashboard";
+      window.location.href = "/dashboard";
+    } else if (userRole === "PARTICIPANT") {
+      window.location.href = "/participant";
     } else {
       window.location.href = "/dashboard";
     }
@@ -38,6 +42,7 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
+  // সেশন থাকলে অটো রিডাইরেক্ট
   useEffect(() => {
     if (mounted && session && !sessionLoading) {
       redirectUser(session.user?.email, (session.user as any)?.role);
@@ -49,16 +54,18 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // ওল্ড টোকেন ক্লিনআপ
       localStorage.removeItem("accessToken");
       Cookies.remove("accessToken");
 
       const response = await axios.post(
-        `${API_URL}/auth/login`, // ডাইনামিক ইউআরএল ব্যবহার করা হয়েছে
+        `${API_URL}/auth/login`, 
         formData,
         { withCredentials: true } 
       );
 
       if (response.data && response.data.success) {
+        // ব্যাকেন্ড অনুযায়ী টোকেন এক্সট্রাকশন
         const token = response.data.token || 
                       response.data.accessToken || 
                       response.data.data?.accessToken;
@@ -71,13 +78,15 @@ export default function LoginPage() {
           
           toast.success("Login Successful! 🚀");
 
+          // ছোট ডিলে দিয়ে রিডাইরেক্ট করা যাতে টোস্ট দেখা যায়
           setTimeout(() => {
             redirectUser(formData.email, user?.role);
-          }, 500);
+          }, 800);
         }
       }
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || "Invalid credentials";
+      console.error("Login Error:", error.response?.data);
+      const errorMsg = error.response?.data?.message || "Invalid email or password";
       toast.error(errorMsg);
     } finally {
       setIsLoading(false);
@@ -88,7 +97,7 @@ export default function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/dashboard",
+        callbackURL: "/dashboard", // গুগল লগইনের পর ডিফল্ট ড্যাশবোর্ড
       });
     } catch (error: any) {
       toast.error("Google login failed.");
@@ -105,10 +114,12 @@ export default function LoginPage() {
     );
   }
 
+  // যদি সেশন অলরেডি থাকে, তবে ফর্ম দেখানোর দরকার নেই (রিডাইরেক্ট হতে থাকবে)
   if (session) return null;
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#020617] px-4 selection:bg-blue-500/30 text-left">
+      {/* Background Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
 
@@ -120,7 +131,7 @@ export default function LoginPage() {
           <h1 className="text-4xl font-black tracking-tighter text-white italic uppercase">
             EVENT<span className="text-blue-500">.</span>SPHERE
           </h1>
-          <p className="text-slate-400 text-[10px] mt-3 font-bold tracking-[0.3em] uppercase">Secure Multi-Role Access</p>
+          <p className="text-slate-400 text-[10px] mt-3 font-bold tracking-[0.3em] uppercase">Secure Access Dashboard</p>
         </div>
 
         <div className="border border-white/5 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 bg-white/[0.03] backdrop-blur-3xl">
