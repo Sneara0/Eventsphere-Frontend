@@ -2,76 +2,105 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import  axiosInstance  from "@/lib/axiosInstance";
+import axiosInstance from "@/lib/axiosInstance";
 import { Loader2, ShieldCheck, CreditCard, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
+// টাইপ ডিফাইন করা (টাইপস্ক্রিপ্ট এরর এড়াতে)
+interface IBooking {
+  id: string;
+  totalPrice?: number;
+  totalAmount?: number;
+  paymentStatus: string;
+  userId: string;
+  userEmail?: string;
+  user?: {
+    email: string;
+  };
+  event?: {
+    title: string;
+  };
+}
+
 function CheckoutContent() {
-  const { id: bookingId } = useParams();
+  const params = useParams();
+  const bookingId = params?.id;
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
 
-  const [booking, setBooking] = useState<any>(null);
+  const [booking, setBooking] = useState<IBooking | null>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     const fetchBookingDetails = async () => {
+      if (!bookingId) return;
+
       try {
+        setLoading(true);
+        // বুকিং ডিটেইলস ফেচ করা
         const res = await axiosInstance.get(`/bookings/${bookingId}`);
+        
         if (res.data.success) {
-          setBooking(res.data.data);
+          const bookingData = res.data.data;
+          setBooking(bookingData);
           
-          if (sessionId || res.data.data.status === "PAID") {
+          // যদি আগে থেকেই পেইড থাকে বা স্ট্রাইপ থেকে সাকসেসফুলি ফিরে আসে
+          if (sessionId || bookingData.paymentStatus === "PAID") {
             setIsSuccess(true);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Fetch Error:", error);
-        toast.error("বুকিং ডিটেইলস লোড করা সম্ভব হয়নি!");
+        
+        // 403 এরর মানে সেশন নেই অথবা এই বুকিং আপনার নয়
+        if (error.response?.status === 403) {
+          toast.error("আপনার এই বুকিং দেখার অনুমতি নেই। পুনরায় লগইন করুন।");
+        } else {
+          toast.error("বুকিং ডিটেইলস লোড করা সম্ভব হয়নি!");
+        }
         router.push("/bookings");
       } finally {
         setLoading(false);
       }
     };
 
-    if (bookingId) fetchBookingDetails();
+    fetchBookingDetails();
   }, [bookingId, router, sessionId]);
 
   const handlePayment = async () => {
-    // ১. ডাটা ভ্যালিডেশন
-    // আপনার আগের এরর (Amount: null) এর প্রধান কারণ এই ভ্যালুটি ঠিকমতো না পাওয়া
-    const finalAmount = booking?.totalPrice || booking?.totalAmount || 0;
+    // পেমেন্টের জন্য সঠিক অ্যামাউন্ট নেওয়া
+    const finalAmount = booking?.totalAmount || booking?.totalPrice || 0;
 
     if (!finalAmount || finalAmount <= 0) {
       toast.error("পেমেন্ট অ্যামাউন্ট পাওয়া যায়নি। অনুগ্রহ করে পেজটি রিফ্রেশ দিন।");
-      console.log("Current Booking Data:", booking); // ডিবাগিং এর জন্য
       return;
     }
 
     setIsProcessing(true);
     try {
-      // ২. ব্যাকএন্ডে রিকোয়েস্ট পাঠানো
+      // স্ট্রাইপ পেমেন্ট সেশন তৈরি করা
       const response = await axiosInstance.post("/payments/create-session", {
         bookingId: booking?.id,
-        totalAmount: Number(finalAmount), // ব্যাকএন্ডে এই নামেই (totalAmount) ডাটা পাঠানো হচ্ছে
-        userEmail: booking?.userEmail || booking?.user?.email,
+        totalAmount: Number(finalAmount),
+        userEmail: booking?.user?.email || booking?.userEmail,
         userId: booking?.userId,
-        eventName: booking?.event?.title || "Event Ticket",
+        eventName: booking?.event?.title || "Event Ticket Booking",
       });
 
       const paymentUrl = response.data?.data?.url || response.data?.url;
 
       if (paymentUrl) {
-        window.location.href = paymentUrl;
+        window.location.href = paymentUrl; // স্ট্রাইপ চেকআউটে নিয়ে যাবে
       } else {
         throw new Error("Stripe URL পাওয়া যায়নি!");
       }
     } catch (error: any) {
       console.error("Payment Error:", error);
-      toast.error(error.response?.data?.message || "পেমেন্ট শুরু করা যায়নি।");
+      const errorMsg = error.response?.data?.message || "পেমেন্ট শুরু করা যায়নি।";
+      toast.error(errorMsg);
     } finally {
       setIsProcessing(false);
     }
@@ -82,7 +111,7 @@ function CheckoutContent() {
       <div className="min-h-screen flex items-center justify-center bg-[#020617]">
         <div className="text-center space-y-4">
           <Loader2 className="animate-spin text-blue-500 h-12 w-12 mx-auto" />
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest italic tracking-tighter">Synchronizing Data...</p>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest italic">Synchronizing Data...</p>
         </div>
       </div>
     );
@@ -102,7 +131,7 @@ function CheckoutContent() {
           </div>
 
           <div className="bg-white/5 border border-white/10 p-8 rounded-[2rem] space-y-6 backdrop-blur-md relative overflow-hidden">
-            {isSuccess && (
+            {(isSuccess || booking?.paymentStatus === "PAID") && (
               <div className="absolute top-4 right-4 text-green-500 flex items-center gap-1 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
                 <CheckCircle2 size={16} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Paid</span>
@@ -112,14 +141,14 @@ function CheckoutContent() {
             <div className="flex justify-between items-start border-b border-white/5 pb-6">
               <div>
                 <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] block mb-1">Selected Event</span>
-                <span className="font-bold text-lg text-white">{booking?.event?.title}</span>
+                <span className="font-bold text-lg text-white">{booking?.event?.title || "Unknown Event"}</span>
               </div>
             </div>
 
             <div className="flex justify-between items-center pt-2">
               <span className="text-blue-500 text-sm font-black uppercase italic tracking-wider">Grand Total</span>
               <span className="text-4xl font-black text-white tracking-tighter">
-                BDT {booking?.totalPrice || booking?.totalAmount}
+                BDT {booking?.totalAmount || booking?.totalPrice}
               </span>
             </div>
           </div>
@@ -141,7 +170,7 @@ function CheckoutContent() {
                 <h3 className="text-xl font-bold mb-4 uppercase italic">Payment Method</h3>
                 <div className="bg-white/5 border-2 border-blue-600/50 p-5 rounded-2xl flex items-center gap-4">
                   <CreditCard className="text-blue-500" />
-                  <span className="text-sm font-bold uppercase tracking-widest">Credit Card</span>
+                  <span className="text-sm font-bold uppercase tracking-widest">Credit Card / Debit Card</span>
                 </div>
               </div>
               
@@ -155,11 +184,14 @@ function CheckoutContent() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full space-y-6 text-center">
-              <CheckCircle2 size={48} className="text-green-500" />
+              <div className="bg-green-500/20 p-6 rounded-full">
+                <CheckCircle2 size={60} className="text-green-500" />
+              </div>
               <h3 className="text-2xl font-black uppercase italic tracking-tighter">Payment Received!</h3>
+              <p className="text-slate-400 text-sm">বুকিং সফল হয়েছে। আপনার ইমেইল চেক করুন।</p>
               <button 
                 onClick={() => router.push("/bookings")}
-                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em]"
+                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all"
               >
                 Go to My Bookings
               </button>
