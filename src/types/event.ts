@@ -9,24 +9,26 @@ export type EventStatus =
   | "CANCELLED";
 
 export interface IEvent {
-  id: string;
+
+  _id: string;          
+  id: string;           // '?' সরিয়ে দিন, কারণ এপিআই থেকে আসার সময় আমরা এটি ম্যাপ করে নিব
   title: string;
   description: string;
-  category: string;     // e.g., 'FLIGHT_ONLY', 'HOLIDAY_PACKAGE'
-  dateTime: string;     // Departure ISO Date
-  time: string;         // Departure Time
-  location: string;     // Arrival City (e.g., Dubai)
-  venue: string;        // Departure Airport (e.g., HSIA)
-  thumbnail?: string;   // Cloudinary Image URL
+  category: string;     
+  dateTime: string;     
+  time: string;         
+  location: string;     
+  venue: string;        
+  thumbnail?: string;   
   ticketPrice: number;
   totalSeats: number;
   availableSeats: number;
   status: EventStatus;
   
-  // --- এয়ার টিকিট স্পেসিফিক ফিল্ডস (নতুন) ---
+  // --- এয়ার টিকিট স্পেসিফিক ফিল্ডস ---
   airlineName?: string;
   flightNumber?: string;
-  flightClass?: string;     // Economy, Business, First Class
+  flightClass?: string;     
   baggageAllowance?: string;
   isRefundable?: boolean;
 

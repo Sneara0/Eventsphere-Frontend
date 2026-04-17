@@ -1,25 +1,28 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/v1/auth";
+// ১. এনভায়রনমেন্ট ভ্যারিয়েবল ব্যবহার করুন
+// প্রোডাকশনে এটি আপনার ভেরসেল ইউআরএল নিবে, লোকালে লোকালহোস্ট
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+// ২. অথ এর জন্য এন্ডপয়েন্ট সেট করুন
+const AUTH_API_URL = `${BASE_URL}/auth`;
 
 const apiClient = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, // Better-Auth বা সেশন কুকির জন্য জরুরি
+  baseURL: AUTH_API_URL,
+  withCredentials: true, 
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// সরাসরি response.data রিটার্ন করার জন্য একটি ইন্টারসেপ্টর বা সহজ ফাংশন ব্যবহার করতে পারেন
-// এতে করে কম্পোনেন্টে বারবার .data লিখতে হবে না
 export const authService = {
   // 1. User Registration
   register: (data: any) => 
-    apiClient.post("/register", data).then(res => res.data),
+    apiClient.post("/sign-up", data).then(res => res.data), // Better-Auth এ সাধারণত sign-up হয়
   
   // 2. User Login
   login: (data: any) => 
-    apiClient.post("/login", data).then(res => res.data),
+    apiClient.post("/sign-in", data).then(res => res.data), // Better-Auth এ সাধারণত sign-in হয়
   
   // 3. Email Verification
   verifyEmail: (data: { email: string; otp: string }) => 

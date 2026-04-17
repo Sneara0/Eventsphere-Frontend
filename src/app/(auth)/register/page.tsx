@@ -26,6 +26,10 @@ export default function RegisterPage() {
 
   const { data: session, isPending: sessionLoading } = useSession();
 
+  // --- ডিপ্লয়মেন্টের জন্য ইউআরএল সেটআপ ---
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+  // ------------------------------------
+
   useEffect(() => {
     if (session) {
       router.replace("/dashboard");
@@ -43,7 +47,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/v1/auth/register",
+        `${API_URL}/auth/register`, // এখানে ডাইনামিক ইউআরএল বসানো হয়েছে
         formData,
         { 
           withCredentials: true,
@@ -51,16 +55,13 @@ export default function RegisterPage() {
         }
       );
 
-      // --- এখানে পরিবর্তন করা হয়েছে ---
       if (response.data) {
         toast.success("Registration successful! Check your email for OTP. 📧");
         
-        // লগইন পেজে না পাঠিয়ে সরাসরি ভেরিফাই ওটিপি পেজে পাঠানো হচ্ছে ইমেলসহ
         setTimeout(() => {
           router.push(`/verify-otp?email=${formData.email}`);
         }, 1500);
       }
-      // ---------------------------
 
     } catch (error: any) {
       const message = error.response?.data?.message || "Registration failed. Try again.";
@@ -95,7 +96,7 @@ export default function RegisterPage() {
   if (session) return null;
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#020617] px-4 selection:bg-blue-500/30">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#020617] px-4 selection:bg-blue-500/30 text-left">
       
       <nav className="fixed top-0 w-full z-[100] bg-[#020617]/50 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -184,7 +185,7 @@ export default function RegisterPage() {
             <button 
               type="button"
               onClick={handleGoogleLogin} 
-              className="w-full h-12 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest bg-white/5 text-white rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-[0.98] group"
+              className="w-full h-12 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest bg-white/5 text-white rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-[0.98] group cursor-pointer"
             >
               <svg className="mr-3 h-4 w-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -239,7 +240,7 @@ export default function RegisterPage() {
               <button 
                 type="submit" 
                 disabled={isLoading} 
-                className="relative w-full h-14 text-[10px] font-black uppercase tracking-[0.2em] text-white rounded-2xl overflow-hidden shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 group mt-4"
+                className="relative w-full h-14 text-[10px] font-black uppercase tracking-[0.2em] text-white rounded-2xl overflow-hidden shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 group mt-4 cursor-pointer"
               >
                 <div className={`absolute inset-0 transition-all duration-500 bg-gradient-to-r ${formData.role === 'organizer' ? 'from-purple-600 to-pink-600' : 'from-blue-600 to-indigo-600'}`} />
                 <span className="relative flex items-center justify-center gap-2">

@@ -19,7 +19,9 @@ export default function LoginPage() {
   
   const { data: session, isPending: sessionLoading } = useSession();
 
-  // ১. রিডাইরেক্ট লজিককে একটি useCallback এর ভেতরে রাখা হয়েছে যেন এটি বারবার পরিবর্তন না হয়
+  // --- এনভায়রনমেন্ট ভেরিয়েবল সেটআপ ---
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
   const redirectUser = useCallback((email: string | undefined, role: string | undefined) => {
     const userRole = role?.toUpperCase();
     
@@ -32,12 +34,10 @@ export default function LoginPage() {
     }
   }, []);
 
-  // ২. শুধুমাত্র মাউন্ট চেক করার জন্য
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // ৩. সেশন চেক করে রিডাইরেক্ট করার জন্য আলাদা ইফেক্ট
   useEffect(() => {
     if (mounted && session && !sessionLoading) {
       redirectUser(session.user?.email, (session.user as any)?.role);
@@ -49,12 +49,11 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // ক্লিনআপ
       localStorage.removeItem("accessToken");
       Cookies.remove("accessToken");
 
       const response = await axios.post(
-        "http://localhost:5000/api/v1/auth/login", 
+        `${API_URL}/auth/login`, // ডাইনামিক ইউআরএল ব্যবহার করা হয়েছে
         formData,
         { withCredentials: true } 
       );
@@ -106,12 +105,10 @@ export default function LoginPage() {
     );
   }
 
-  // যদি অলরেডি সেশন থাকে, তবে ফর্ম দেখানোর দরকার নেই (রিডাইরেক্ট এর আগ পর্যন্ত)
   if (session) return null;
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#020617] px-4">
-      {/* Background Effects */}
+    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#020617] px-4 selection:bg-blue-500/30 text-left">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
 
@@ -131,7 +128,7 @@ export default function LoginPage() {
             <button 
               type="button" 
               onClick={handleGoogleLogin} 
-              className="w-full h-12 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest bg-white/5 text-white rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-[0.98]"
+              className="w-full h-12 flex items-center justify-center font-bold text-[10px] uppercase tracking-widest bg-white/5 text-white rounded-2xl border border-white/10 hover:bg-white/10 transition-all active:scale-[0.98] cursor-pointer"
             >
               Login with Google
             </button>
@@ -146,7 +143,7 @@ export default function LoginPage() {
                 <input 
                   type="email" 
                   placeholder="EMAIL ADDRESS" 
-                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold"
+                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required 
@@ -158,7 +155,7 @@ export default function LoginPage() {
                 <input 
                   type="password" 
                   placeholder="PASSWORD"
-                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold"
+                  className="w-full h-12 pl-12 bg-white/5 border border-white/10 text-white placeholder:text-slate-600 focus:border-blue-500/50 transition-all rounded-2xl outline-none text-[11px] font-bold tracking-widest"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   required 
@@ -168,7 +165,7 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 disabled={isLoading} 
-                className="relative w-full h-14 text-[10px] font-black uppercase tracking-[0.2em] text-white rounded-2xl overflow-hidden shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 group mt-2"
+                className="relative w-full h-14 text-[10px] font-black uppercase tracking-[0.2em] text-white rounded-2xl overflow-hidden shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 group mt-2 cursor-pointer"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 group-hover:opacity-90 transition-all" />
                 <span className="relative flex items-center justify-center gap-2">
@@ -181,7 +178,7 @@ export default function LoginPage() {
           <div className="text-center mt-8 pt-6 border-t border-white/5">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-white hover:text-blue-500 transition-all underline underline-offset-4">
+              <Link href="/register" className="text-white hover:text-blue-500 transition-all underline underline-offset-4 decoration-blue-500/30">
                 Register
               </Link>
             </p>
