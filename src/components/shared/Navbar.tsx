@@ -1,223 +1,223 @@
-"use client";
-
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+"use client"
+import React, { useState } from 'react'
+import Link from 'next/link'
 import { 
-  Menu, X, Sparkles, Home, Ticket, LayoutDashboard, 
-  CreditCard, LogOut, Loader2, PlusCircle, Settings, HelpCircle 
-} from "lucide-react";
+  Menu, 
+  X, 
+  User, 
+  LogOut, 
+  LayoutDashboard, 
+  Settings, 
+  Bell, 
+  Search,
+  Users, // Admin এর জন্য
+  ShieldCheck, // Manager এর জন্য
+  History // User এর জন্য
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ModeToggle } from './ModeToggle' 
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false); 
-  const pathname = usePathname();
-  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(true) 
+  
+  // উদাহরণস্বরূপ রোল সেট করা (এটি পরে Clerk/Auth থেকে আসবে)
+  const [userRole, setUserRole] = useState<'ADMIN' | 'MANAGER' | 'USER'>('ADMIN') 
 
-  const { data: session, isPending } = authClient.useSession();
-  const isLoggedIn = !!session;
+  // পাবলিক রুটস
+  const publicRoutes = [
+    { name: 'Home', path: '/' },
+    { name: 'Explore', path: '/explore' },
+    { name: 'Events', path: '/events' },
+    { name: 'About', path: '/about' },
+    { name: 'Contact', path: '/contact' },
+  ]
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // রোল অনুযায়ী ড্যাশবোর্ড মেনু কনফিগ
+  const dashboardMenu = {
+    ADMIN: [
+      { name: 'Overview', path: '/admin', icon: LayoutDashboard },
+      { name: 'Manage Users', path: '/admin/users', icon: Users },
+      { name: 'Event Controls', path: '/admin/events', icon: Settings },
+      { name: 'System Logs', path: '/admin/logs', icon: ShieldCheck },
+      { name: 'Revenue', path: '/admin/revenue', icon: Search },
+    ],
+    MANAGER: [
+      { name: 'Dashboard', path: '/manager', icon: LayoutDashboard },
+      { name: 'Approvals', path: '/manager/approvals', icon: ShieldCheck },
+      { name: 'Team Update', path: '/manager/team', icon: Users },
+      { name: 'Reports', path: '/manager/reports', icon: History },
+    ],
+    USER: [
+      { name: 'My Events', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'History', path: '/dashboard/history', icon: History },
+      { name: 'Profile Settings', path: '/profile', icon: User },
+    ]
+  }
 
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
-  }, [isOpen]);
-
-  const handleLogout = () => {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, "")
-          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-      setIsOpen(false);
-      window.location.href = "/login";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      window.location.href = "/login";
-    }
-  };
-
-  if (!mounted) return null; 
-
-  const navLinks = [
-    { name: "Home", href: "/", icon: <Home size={18} />, bg: "bg-blue-600/10 border-blue-500/20 text-blue-400" },
-    { name: "Events", href: "/events", icon: <Sparkles size={18} />, bg: "bg-purple-600/10 border-purple-500/20 text-purple-400" },
-    { name: "Bookings", href: "/bookings", icon: <Ticket size={18} />, bg: "bg-rose-600/10 border-rose-500/20 text-rose-400" },
-    { name: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, bg: "bg-emerald-600/10 border-emerald-500/20 text-emerald-400" },
-  ];
+  const routes = isLoggedIn ? publicRoutes : publicRoutes
 
   return (
-    <>
-      <header className="fixed top-0 left-0 w-full z-[1000] bg-[#020617]/85 backdrop-blur-2xl border-b border-white/[0.03] py-2.5 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-3 relative z-[1001] group">
-              {/* --- ADVANCED PREDIUM LOGO DESIGN --- */}
-              <div className="relative w-11 h-11 flex items-center justify-center">
-                
-                {/* 1. কসমিক গ্রেডিয়েন্ট ব্যাকগ্রাউন্ড রিং (animated) */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-500 to-purple-600 rounded-2xl opacity-80 blur-[2px] group-hover:opacity-100 group-hover:rotate-180 transition-all duration-1000 ease-in-out" />
-                
-                {/* 2. ইনার কন্টেইনার (লোগো হোল্ডার) */}
-                <div className="absolute inset-[2.5px] bg-[#020617] rounded-[13px] z-10 flex items-center justify-center overflow-hidden border border-white/5">
-                  
-                  {/* লোগো ইমেজ উইথ ডাইনামিক অ্যানিমেশন */}
-                  <img 
-                    src="/event logo.png" 
-                    alt="EventSphere" 
-                    className="w-[85%] h-[85%] object-contain relative z-20 
-                               transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-                               group-hover:scale-110 group-hover:rotate-[-10deg]" 
-                  />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        
+        {/* 1. Logo */}
+        <Link href="/" className="text-2xl font-bold text-primary tracking-tighter">
+          EVENT<span className="text-foreground">FLOW</span>
+        </Link>
 
-                  {/* হালকা ওভারলে গ্রেডিয়েন্ট */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-15" />
-                </div>
-
-                {/* 3. নিয়ন গ্লো ইফেক্ট (পেছনে) - মাউস নিলে পালস করবে */}
-                <div className="absolute -inset-1.5 bg-primary/40 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-500 z-0" />
-              </div>
-              
-              {/* টেক্সট লোগো - আরও স্টাইলিশ */}
-              <span className="text-2xl font-black tracking-tighter italic uppercase text-white group-hover:text-primary transition-colors">
-                Event<span className="text-primary group-hover:text-white transition-colors">.</span>Sphere
-              </span>
+        {/* 2. Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          {routes.map((route) => (
+            <Link 
+              key={route.path} 
+              href={route.path}
+              className="text-sm font-medium hover:text-primary transition-colors relative group"
+            >
+              {route.name}
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
             </Link>
+          ))}
+        </nav>
 
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    pathname === link.href ? "bg-primary text-primary-foreground shadow-lg" : "text-slate-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3 relative z-[1001]">
-            <div className="hidden sm:flex items-center gap-3">
-              {isPending ? (
-                <Loader2 className="animate-spin text-primary" size={18} />
-              ) : isLoggedIn ? (
-                <div className="flex items-center gap-4">
-                  <Link href="/create-event" className="hidden lg:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl hover:bg-emerald-500 hover:text-white transition-all">
-                    <PlusCircle size={14} /> Host Event
-                  </Link>
-
-                  <div className="flex items-center gap-4 border-l border-white/10 pl-4">
-                    <Link href="/dashboard" className="relative group/avatar text-white">
-                      <div className="w-10 h-10 rounded-2xl border border-white/10 overflow-hidden bg-white/5 flex items-center justify-center">
-                        {session.user.image ? (
-                          <img src={session.user.image} className="w-full h-full object-cover" alt="Profile" />
-                        ) : (
-                          <span className="text-primary font-black uppercase text-sm">{session.user.name?.[0]}</span>
-                        )}
-                      </div>
-                    </Link>
-                  </div>
-
-                  <button 
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all"
-                  >
-                    <LogOut size={14} /> Exit
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-5 mr-2">
-                  <Link href="/login" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Login</Link>
-                  <Link href="/register" className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20">Join Free</Link>
-                </div>
-              )}
-            </div>
-            
-            <button 
-              onClick={() => setIsOpen(!isOpen)} 
-              className={`md:hidden p-2.5 rounded-xl transition-all active:scale-90 ${isOpen ? 'bg-rose-600 text-white' : 'bg-primary text-primary-foreground'}`}
-            >
-              {isOpen ? <X size={20} strokeWidth={3} /> : <Menu size={20} strokeWidth={3} />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* --- Fullscreen Mobile Menu --- */}
-      <div className={`fixed inset-0 z-[999] transition-all duration-700 ease-[cubic-bezier(0.85, 0, 0.15, 1)] ${
-          isOpen ? "translate-y-0 opacity-100 visible" : "-translate-y-full opacity-0 invisible"
-        }`}>
-        <div className="absolute inset-0 bg-[#020617]/98 backdrop-blur-3xl" onClick={() => setIsOpen(false)} />
-        <div className="relative h-full flex flex-col p-8 pt-28 max-w-lg mx-auto overflow-y-auto">
+        {/* 3. Desktop Actions */}
+        <div className="hidden md:flex items-center gap-4">
+          <ModeToggle />
           
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.name} 
-                href={link.href} 
-                onClick={() => setIsOpen(false)}
-                className={`flex flex-col gap-4 p-6 rounded-[2rem] border transition-all ${
-                  pathname === link.href ? "bg-primary border-primary shadow-2xl" : `${link.bg} border-white/5`
-                }`}
-              >
-                <div className="w-fit p-2.5 rounded-xl bg-white/10">{link.icon}</div>
-                <span className="font-black text-[10px] tracking-[0.2em] uppercase italic text-white">{link.name}</span>
-              </Link>
-            ))}
-          </div>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background"></span>
+              </Button>
 
-          <div className="space-y-3 mb-8">
-            {[
-              { name: "Payments", href: "/dashboard", icon: <CreditCard size={18} /> },
-              { name: "Settings", href: "/dashboard", icon: <Settings size={18} /> },
-              { name: "Help Support", href: "/help", icon: <HelpCircle size={18} /> }
-            ].map((item) => (
-              <Link 
-                key={item.name} 
-                href={item.href} 
-                onClick={() => setIsOpen(false)}
-                className="flex items-center justify-between p-5 bg-white/5 rounded-[1.5rem] border border-white/10 hover:bg-white/10 group transition-all"
-              >
-                <div className="flex items-center gap-4 text-white/50 group-hover:text-white transition-colors">
-                  {item.icon}
-                  <span className="text-[10px] font-black uppercase tracking-widest italic">{item.name}</span>
-                </div>
-                <Sparkles size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-all" />
-              </Link>
-            ))}
-          </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="h-9 w-9 cursor-pointer border-2 border-primary/10 hover:border-primary/50 transition-all">
+                    <AvatarImage src="https://github.com/shadcn.png" />
+                    <AvatarFallback>EF</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 mt-2 p-2">
+                  <DropdownMenuLabel className="flex flex-col">
+                    <span className="text-sm font-bold uppercase tracking-tighter">My Account</span>
+                    <span className="text-[10px] text-primary font-black uppercase tracking-[0.2em]">{userRole} ROLE</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* ড্রপডাউনে রোল অনুযায়ী ডায়নামিক মেনু */}
+                  {dashboardMenu[userRole].map((item) => (
+                    <DropdownMenuItem key={item.path} asChild>
+                      <Link href={item.path} className="flex w-full cursor-pointer py-2">
+                        <item.icon className="mr-2 h-4 w-4" /> {item.name}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
 
-          <div className="mt-auto pb-10 space-y-4">
-            {isLoggedIn && (
-              <div className="flex items-center gap-4 p-5 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem] border border-white/10">
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary font-black text-xl">{session.user.name?.[0]}</div>
-                <div className="min-w-0">
-                  <h3 className="text-white font-black text-sm truncate uppercase italic">{session.user.name}</h3>
-                  <p className="text-primary text-[9px] font-bold uppercase tracking-widest mt-1">Verified Member</p>
-                </div>
-              </div>
-            )}
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] bg-rose-600/20 border border-rose-600/30 text-rose-500 font-black text-[10px] tracking-[0.2em] uppercase hover:bg-rose-600 hover:text-white transition-all"
-            >
-              <LogOut size={16} /> Sign Out Account
-            </button>
-          </div>
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex w-full cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" /> Account Settings
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={() => setIsLoggedIn(false)}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="ghost" size="sm">Login</Button>
+              </Link>
+              <Link href="/register">
+                <Button size="sm" className="rounded-full px-6 shadow-md hover:shadow-primary/20 transition-all">
+                  Join Now
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Mobile Toggle */}
+        <div className="md:hidden flex items-center gap-3">
+          <ModeToggle />
+          <button 
+            className="p-2 text-foreground rounded-md hover:bg-muted" 
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </div>
-    </>
-  );
+
+      {/* 5. Mobile Menu */}
+      {isOpen && (
+        <div className="md:hidden bg-background border-b px-4 py-6 space-y-4 animate-in slide-in-from-top duration-300">
+          <div className="flex flex-col gap-4">
+            {routes.map((route) => (
+              <Link 
+                key={route.path} 
+                href={route.path}
+                onClick={() => setIsOpen(false)}
+                className="text-lg font-medium hover:text-primary transition-colors border-b border-muted pb-2"
+              >
+                {route.name}
+              </Link>
+            ))}
+          </div>
+
+          <div className="pt-4 space-y-3">
+            {isLoggedIn ? (
+              <>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2">{userRole} Dashboard</p>
+                <div className="grid grid-cols-1 gap-2">
+                   {dashboardMenu[userRole].map((item) => (
+                      <Link key={item.path} href={item.path} onClick={() => setIsOpen(false)}>
+                        <Button variant="ghost" className="w-full justify-start gap-2 h-11">
+                          <item.icon className="h-4 w-4" /> {item.name}
+                        </Button>
+                      </Link>
+                   ))}
+                </div>
+                <Button 
+                  variant="destructive" 
+                  className="w-full justify-start gap-2 mt-4"
+                  onClick={() => {setIsLoggedIn(false); setIsOpen(false);}}
+                >
+                  <LogOut className="h-4 w-4" /> Logout
+                </Button>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <Link href="/login" onClick={() => setIsOpen(false)}>
+                  <Button variant="outline" className="w-full">Login</Button>
+                </Link>
+                <Link href="/register" onClick={() => setIsOpen(false)}>
+                  <Button className="w-full">Join Now</Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  )
 }

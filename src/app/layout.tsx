@@ -1,50 +1,58 @@
 import type { Metadata } from "next";
-import { Inter, Geist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import Navbar from "@/components/shared/Navbar"; 
 import { cn } from "@/lib/utils";
-import Navbar from "@/components/shared/Navbar";
-import { Toaster } from "sonner";
-import QueryProvider from "@/providers/QueryProvider"; // নিশ্চিত করুন এই পাথটি সঠিক
+import { ClerkProvider } from "@clerk/nextjs"; 
+import ChatBot from "@/components/ai/ChatBot"; // ১. চ্যাটবট ইম্পোর্ট করুন
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
-const inter = Inter({ subsets: ["latin"] });
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "EventSphere | Host & Discover Events",
-  description: "A professional platform for secure event ticketing.",
+  title: "EventFlow | AI-Powered Platform",
+  description: "Professional event management system",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)} suppressHydrationWarning>
-      <body className={`${inter.className} bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased`} suppressHydrationWarning>
-        
-        {/* TanStack Query Provider দিয়ে পুরো অ্যাপকে র্যাপ করা হলো */}
-        <QueryProvider>
-          {/* ১. গ্লোবাল নেভবার */}
-          <Navbar />
+    <ClerkProvider>
+      <html
+        lang="en"
+        // এটি অত্যন্ত গুরুত্বপূর্ণ, যা সার্ভার এবং ক্লায়েন্টের HTML অমিল এড়িয়ে যায়
+        suppressHydrationWarning 
+        className={cn(geistSans.variable, geistMono.variable, "h-full antialiased")}
+      >
+        <body className="min-h-screen bg-background text-foreground transition-colors duration-300 flex flex-col">
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Navbar /> 
+            <main className="flex-1 w-full">
+              {children}
+            </main>
 
-          {/* ২. মেইন কন্টেন্ট */}
-          <main className="min-h-screen">
-            {children}
-          </main>
-
-          {/* ৩. টোস্ট নোটিফিকেশন */}
-          <Toaster 
-            position="top-center" 
-            richColors 
-            closeButton
-            toastOptions={{
-              style: { background: '#020617', border: '1px solid #1e293b', color: '#fff' },
-            }}
-          />
-        </QueryProvider>
-
-      </body>
-    </html>
+            {/* ২. চ্যাটবট এখানে যুক্ত করা হলো যাতে এটি সব পেজে শো করে */}
+            <ChatBot /> 
+            
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
