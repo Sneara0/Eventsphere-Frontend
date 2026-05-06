@@ -39,7 +39,9 @@ Clone the repo and install dependencies:
 ```bash
 git clone https://github.com/Sneara0/EventSphere-Frontend.git
 cd EventSphere-Frontend
-npm installSet up environment variables by creating a .env file in the root directory:
+npm install
+
+Set up environment variables by creating a .env file in the root directory:
 DATABASE_URL=your_database_url
 STRIPE_SECRET_KEY=your_stripe_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_public_key
