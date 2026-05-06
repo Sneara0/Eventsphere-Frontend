@@ -40,12 +40,11 @@ Organizing events often involves complex challenges like managing real-time tick
    npm install
    DATABASE_URL="your_postgresql_connection_string"
 
-Environment Variables
-Create a .env file in the root directory and add:
+Set up environment variables by creating a .env file in the root directory:
 
 Code snippet
-DATABASE_URL="your_postgresql_connection_string"
-STRIPE_SECRET_KEY="your_stripe_key"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="your_public_key"
+DATABASE_URL=your_database_url
+STRIPE_SECRET_KEY=your_stripe_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_public_key
 
 npm run dev
