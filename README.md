@@ -39,12 +39,7 @@ Organizing events often involves complex challenges like managing real-time tick
    cd EventSphere-Frontend
    npm install
    DATABASE_URL="your_postgresql_connection_string"
-
-Set up environment variables by creating a .env file in the root directory:
-
-Code snippet
+   Set up environment variables by creating a .env file in the root directory:
 DATABASE_URL=your_database_url
 STRIPE_SECRET_KEY=your_stripe_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_public_key
-
-npm run dev
